@@ -1,11 +1,263 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+import { actions } from "astro:actions";
+import Layout from "../layouts/Layout.astro";
+import { isActionError } from "astro:actions";
 
 // Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
 // Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+//const notes = await db.select().from(safeNotes);
+//console.log(notes);
+const { data, error } = await Astro.callAction(actions.readNotes, "");
+if (isActionError(error)) Astro.redirect("/404");
 ---
 
-<Layout>
-	<Welcome />
+<Layout
+	title="Astro Notes"
+	description="A simple note-taking app built with Astro"
+>
+	<h1 class="font-black text-center text-2xl p-4">Astro Notes</h1>
+	<p class="text-center px-4">
+		Welcome to Astro Notes! This is a simple note-taking app built with
+		Astro.
+	</p>
+
+	<form id="form-notes" class="flex flex-col gap-4 p-4">
+		<label for="title" class="font-bold text-xl">Note</label>
+		<div class="w-full">
+			<input
+				type="text"
+				id="title"
+				name="title"
+				placeholder="Title"
+				class="rounded text-slate-900 p-2 w-full"
+				required
+			/>
+			<p id="error-title" class="text-red-500 text-xs"></p>
+		</div>
+		<div class="w-full">
+			<textarea
+				id="content"
+				name="content"
+				rows="4"
+				placeholder="My Note"
+				required
+				class="rounded text-slate-900 p-2 w-full"></textarea>
+			<p id="error-content" class="text-red-500 text-xs"></p>
+		</div>
+		<button
+			type="submit"
+			class="rounded bg-slate-500 py-2 border hover:bg-slate-400"
+			>Add Note</button
+		>
+	</form>
+	<div class="p-4">
+		<hr />
+	</div>
+	<div>
+		<h2 class="font-bold text-xl p-4">Notes</h2>
+		<ul class="p-4 gap-2 flex flex-col">
+			{
+				data?.map((note) => {
+					return (
+						<li class="p-2 bg-slate-400/40 rounded flex flex-col gap-2">
+							<div class="flex justify-between">
+								<h3 class="font-bold">{note.title}</h3>
+								<p class="text-sm">
+									Create at:{" "}
+									{note.createdAt?.toLocaleDateString()}
+								</p>
+							</div>
+							<hr />
+							<p class="text-slate-900">{note.content}</p>
+							<p class="text-sm">
+								Update at:{" "}
+								{note.updatedAt?.toLocaleTimeString()}
+							</p>
+							<div class="flex justify-end gap-4">
+								<button
+									class="rounded bg-slate-500 px-2 border hover:bg-slate-400"
+									data-edit={note.id}
+									data-title={note.title}
+									data-content={note.content}
+								>
+									Edit
+								</button>
+								<button
+									class="rounded bg-slate-500 px-2 border hover:bg-slate-400"
+									data-delete={note.id}
+								>
+									Delete
+								</button>
+							</div>
+						</li>
+					);
+				})
+			}
+		</ul>
+	</div>
+	<dialog id="dialog" class="bg-slate-700/90 text-white rounded border">
+		<div class="flex justify-between p-4">
+			<h2 class="font-bold text-xl p-4">Edit Note</h2>
+			<form method="dialog">
+				<button
+					class="rounded bg-slate-500 border hover:bg-slate-400 h-7 w-7"
+					aria-label="close"
+					formnovalidate>X</button
+				>
+			</form>
+		</div>
+		<form class="flex flex-col gap-4 p-4" id="form-edit">
+			<label for="title">Title</label>
+			<input
+				type="text"
+				name="title"
+				placeholder="Title"
+				class="rounded text-slate-900 p-2 w-full"
+				required
+			/>
+			<label for="content">Content</label>
+			<textarea
+				name="content"
+				class="rounded text-slate-900 p-2 w-full"
+				placeholder="My Note"
+				required></textarea>
+			<button
+				type="submit"
+				class="rounded bg-slate-500 py-2 border hover:bg-slate-400"
+				>Save</button
+			>
+		</form>
+	</dialog>
 </Layout>
+<script>
+	import { actions, isActionError, isInputError } from "astro:actions";
+
+	const formNote = document.getElementById("form-notes") as HTMLFormElement;
+	const deleteButtons = document.querySelectorAll("[data-delete]");
+	const editButtons = document.querySelectorAll("[data-edit]");
+
+	editButtons.forEach((button) => {
+		const id = button.getAttribute("data-edit");
+
+		if (!id) return;
+		button.addEventListener("click", async (event) => {
+			const title = button.getAttribute("data-title");
+			const content = button.getAttribute("data-content");
+			const dialog = document.getElementById(
+				"dialog",
+			) as HTMLDialogElement;
+			dialog.showModal();
+			const formEdit = document.getElementById(
+				"form-edit",
+			) as HTMLFormElement;
+			(formEdit["title"] as any).value = title;
+			(formEdit["content"] as any).value = content;
+			formEdit.addEventListener("submit", async (event) => {
+				event.preventDefault();
+
+				const formData = new FormData(formEdit);
+				const title = formData.get("title") as string;
+				const content = formData.get("content") as string;
+				await updateNote({
+					id,
+					title,
+					content,
+				});
+				dialog.close();
+				formEdit.reset();
+				window.location.reload();
+			});
+		});
+	});
+
+	deleteButtons.forEach((button) => {
+		button.addEventListener("click", async (event) => {
+			const id = button.getAttribute("data-delete");
+			if (!id) return;
+			const confirmDelete = confirm("Are you sure you want to delete?");
+			if (!confirmDelete) return;
+			await deleteNote(id);
+		});
+	});
+
+	formNote.addEventListener("submit", async (event) => {
+		event.preventDefault();
+		const formData = new FormData(formNote);
+
+		const { data, error } = await actions.createNote(formData);
+
+		if (isActionError(error)) alert(error.message);
+		if (isInputError(error)) {
+			// TODO: Mejorar esto
+			/* if (error.fields.content) {
+			const errorContentElement =
+				document.getElementById("error-content");
+			if (errorContentElement) {
+				errorContentElement.textContent =
+					error.fields.content.join(",");
+			}
+		}
+		if (error.fields.title) {
+			const errorTitleElement =
+				document.getElementById("error-title");
+			if (errorTitleElement) {
+				errorTitleElement.textContent =
+					error.fields.title.join(",");
+			}
+		} */
+			Object.keys(error.fields).forEach((field) => {
+				const errorElement = document.getElementById(`error-${field}`);
+				if (errorElement) {
+					errorElement.textContent = (
+						error.fields as Record<string, string[]>
+					)[field].join(",");
+				}
+			});
+			return;
+		}
+		formNote.reset();
+		window.location.reload();
+	});
+
+	async function deleteNote(id: string) {
+		const { data, error } = await actions.deleteNote({
+			id,
+		});
+
+		if (isActionError(error)) {
+			alert(error.message);
+			return;
+		}
+		if (isInputError(error)) {
+			alert("Id is required");
+			return;
+		}
+		alert(data);
+		window.location.reload();
+	}
+
+	async function updateNote({
+		id,
+		title,
+		content,
+	}: {
+		id: string;
+		title: string;
+		content: string;
+	}) {
+		const { data, error } = await actions.updateNote({
+			id,
+			title,
+			content,
+		});
+		if (isActionError(error)) {
+			alert(error.message);
+			return;
+		}
+		if (isInputError(error)) {
+			alert("Id, title and content are required");
+			return;
+		}
+		alert(data);
+	}
+</script>

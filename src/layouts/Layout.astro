@@ -1,3 +1,12 @@
+---
+interface Props {
+	title: string;
+	description: string;
+}
+
+const { title, description } = Astro.props;
+---
+
 <!doctype html>
 <html lang="en">
 	<head>
@@ -5,14 +14,19 @@
 		<meta name="viewport" content="width=device-width" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
+		<meta name="description" content={description} />
+		<title>{title}</title>
 	</head>
-	<body>
+	<body class="bg-slate-700 text-slate-100">
 		<slot />
 	</body>
 </html>
 
 <style>
+	* {
+		box-sizing: border-box;
+	}
+
 	html,
 	body {
 		margin: 0;
