@@ -1,6 +1,6 @@
 # Init
 
-### With Local DB
+### Build with Local DB
 ```sh
 ASTRO_DATABASE_FILE='./content.db' npm run build
 ```
