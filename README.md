@@ -26,14 +26,30 @@ Inside of your Astro project, you'll see the following folders and files:
 
 ```text
 /
-├── public/
+├── db
+│   ├── config.ts
+│   └── seed.ts
+├── public
 │   └── favicon.svg
-├── src/
-│   ├── layouts/
+├── src
+│   ├── actions
+│   │   └── index.ts
+│   ├── assets
+│   │   ├── astro.svg
+│   │   └── background.svg
+│   ├── db
+│   │   └── config.ts
+│   ├── layouts
 │   │   └── Layout.astro
-│   └── pages/
+│   └── pages
 │       └── index.astro
-└── package.json
+├── astro.config.mjs
+├── content.db
+├── package.json
+├── package-lock.json
+├── README.md
+├── tailwind.config.mjs
+└── tsconfig.json
 ```
 
 To learn more about the folder structure of an Astro project, refer to [our guide on project structure](https://docs.astro.build/en/basics/project-structure/).
