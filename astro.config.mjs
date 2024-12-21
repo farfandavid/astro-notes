@@ -16,5 +16,11 @@ export default defineConfig({
     mode: 'standalone'
   }),
 
-  integrations: [tailwind(), db()]
+  integrations: [tailwind(), db()],
+  server: {
+    port: 4321,
+    open: true,
+    host: true
+  }
+
 });
